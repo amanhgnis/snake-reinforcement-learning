@@ -14,6 +14,10 @@ def main():
     score = 0
     food = False
     
+    obstacles = [
+        
+    ]
+
     running = True
 
     while running:
@@ -31,18 +35,22 @@ def main():
         WIN.fill(BACKGROUD_COLOUR)
         draw_grid(WIN)
         snake.get_direction()
-        snake.move()
+        snake.move(obstacles)
         snake.draw(WIN)
         pygame.draw.rect(WIN, FOOD_COLOUR, pygame.Rect(x_food, y_food, SIZE, SIZE))
+        for obstacle in obstacles:
+            x, y = obstacle[0] * SIZE, obstacle[1] * SIZE
+            rect = pygame.Rect(x, y, SIZE, SIZE)
+            pygame.draw.rect(WIN, OBSTACLE_COLOUR, rect)
         img = font.render(f"Score: {score}", True, FONT_COLOUR)
         WIN.blit(img, (SCORE_X, SCORE_Y))
-
-        pygame.display.update()
 
         if snake.head.x == x_food and snake.head.y == y_food:
             score += 1
             food = False
             snake.add_node(x_food, y_food)
+
+        pygame.display.update()
     
 def draw_grid(WIN):
     for x in range(0, WIDTH, SIZE):

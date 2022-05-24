@@ -17,6 +17,7 @@ class Snake:
         self.head = Node(x, y)
         self.tail = self.head
         self.direction = None
+        self.nodes_positions = []
 
     def add_node(self, x, y):
         """
@@ -36,7 +37,7 @@ class Snake:
         if key[pygame.K_DOWN]:
             self.direction = "DOWN"
         
-    def move(self):
+    def move(self, obstacles_list=[]):
         """
         """
         # Get the new coordinates of the head
@@ -49,18 +50,35 @@ class Snake:
             new_y -= SIZE
         if self.direction == "DOWN":
             new_y += SIZE
+        if self.direction == "STOP":
+           return 
 
+        for obstacle in obstacles_list:
+            x, y = obstacle[0] * SIZE, obstacle[1] * SIZE
+            if new_x == x and new_y == y:
+                self.direction = "STOP"
+                return
+
+        for node_position in self.nodes_positions:
+            x, y = node_position[0], node_position[1]
+            if new_x == x and new_y == y:
+                self.direction = "STOP"
+                return
+
+        self.nodes_positions = []
         # now move each node
         current_node = self.head
         while current_node.next_node != None:
-            current_x, current_y = current_node.x, current_node.y   # get current node position
-            current_node.x, current_node.y =  new_x, new_y          # update current node position   
-            new_x, new_y = current_x, current_y                     # current node position will become next node position
+            current_x, current_y = current_node.x, current_node.y           # get current node position
+            current_node.x, current_node.y =  new_x, new_y                  # update current node position
+            self.nodes_positions.append((current_node.x, current_node.y))   
+            new_x, new_y = current_x, current_y                             # current node position will become next node position
             current_node = current_node.next_node
         # now move the tail
         current_x, current_y = current_node.x, current_node.y
         current_node.x, current_node.y =  new_x, new_y
-            
+        self.nodes_positions.append((current_node.x, current_node.y))
+
     def draw(self, WIN):
         current_node = self.head
         while current_node.next_node != None:   
