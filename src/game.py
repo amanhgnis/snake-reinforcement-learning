@@ -16,8 +16,9 @@ class Game:
         self.WIDTH = size[0]
         self.HEIGHT = size[1]
         self.block_size = block_size
-        self.snake = Snake(0,0)
         self.level = level
+        self.snake = Snake(0, 0)
+        self.get_starting_position()
         self.SCREEN = pygame.display.set_mode((self.WIDTH * self.block_size, self.HEIGHT * self.block_size))
         self.clock = pygame.time.Clock()
         self.FPS = FPS
@@ -65,9 +66,23 @@ class Game:
         if self.snake.head.y < 0:
             self.snake.head.y = self.HEIGHT
 
+    def get_starting_position(self):
+        found_snake_location = False
+        while not found_snake_location:
+            x = random.randrange(0, self.WIDTH - 1, 1)
+            y = random.randrange(0, self.HEIGHT - 1, 1)
+            if (x,y) not in self.level:
+                self.snake.head.x, self.snake.head.y = x, y
+                found_snake_location = True      
+
     def spawn_food(self):
-        self.food_x = random.randrange(0, self.WIDTH - 1, 1)
-        self.food_y = random.randrange(0, self.HEIGHT - 1, 1)
+        found_food_location = False
+        while not found_food_location:
+            x = random.randrange(0, self.WIDTH - 1, 1)
+            y = random.randrange(0, self.HEIGHT - 1, 1)
+            if (x,y) not in self.snake.nodes_positions and (x,y) not in self.level:
+                self.food_x, self.food_y = x, y
+                found_food_location = True
 
     def draw(self):
         self.SCREEN.fill(BACKGROUD_COLOUR)
@@ -92,8 +107,13 @@ class Game:
 
 
 def main():
-    level = []
-    game = Game(size=(21,21), level=level)
+    level = [
+        (0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5,0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+        (20, 20), (19, 20), (18, 20), (17, 20), (16, 20), (15, 20), (20,19), (20, 18), (20, 17), (20, 16), (20, 15), 
+        (0, 20), (0, 19), (0, 18), (0, 17), (0, 16), (0, 15), (1,20), (2, 20), (3, 20), (4, 20), (5, 20),
+        (20, 0), (20, 1), (20, 2), (20, 3), (20, 4), (20,5), (19, 0), (18, 0), (17, 0), (16, 0), (15, 0),
+    ]
+    game = Game(size=(21, 21), level=level)
     game.play()
 
 if __name__ == "__main__":
