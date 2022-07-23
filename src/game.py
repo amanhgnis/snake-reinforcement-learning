@@ -18,6 +18,7 @@ class Game:
         self.block_size = block_size
         self.level = level
         self.snake = Snake(0, 0)
+        self.snake.add_node(0, 0)
         self.get_starting_position()
         self.SCREEN = pygame.display.set_mode((self.WIDTH * self.block_size, self.HEIGHT * self.block_size))
         self.clock = pygame.time.Clock()

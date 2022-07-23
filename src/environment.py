@@ -1,56 +1,64 @@
+from snake import Snake
 import random
 import pygame
-from snake import Snake
 from consts import *
+import numpy as np
 
-class SnakeGame:
-    def __init__(self, size=(21,21), BLOCK_SIZE=25, level=[], FPS=10):
-        self.actions = ["UP", "DOWN", "LEFT", "RIGHT"]
+class SnakeGame():
+    def __init__(self, board_size=(32,32), level=[], block_size=15):
+        self.WIDTH, self.HEIGHT = board_size[0], board_size[1]
+        self.SCREEN = None
+        self.BLOCK_SIZE = block_size
         self.level = level
-        self.WIDTH = size[0]
-        self.HEIGHT = size[1]
-        self.BLOCK_SIZE = BLOCK_SIZE
-        self.FPS = FPS
-        pygame.init()
-        self.SCREEN = pygame.display.set_mode((self.WIDTH * self.BLOCK_SIZE, self.HEIGHT * self.BLOCK_SIZE))
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.Font(None, FONT_SIZE)
-        self.SCORE_X = (self.WIDTH  -  4)* self.BLOCK_SIZE
-        self.SCORE_Y = 5
+        self.SCORE_X = (self.WIDTH - 6) * self.BLOCK_SIZE
+        self.SCORE_Y = 1 * self.BLOCK_SIZE
         self.reset()
- 
+        self.actions = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+        self.opposite = {'UP':'DOWN', 'DOWN':'UP', 'LEFT':'RIGHT', 'RIGHT':'LEFT','STOP':'', None : None}
+
     def reset(self):
-        self.done = False
-        self.observation = None
-        self.action = None
-        self.reward = None
-        self.score = 0
-        self.snake = Snake(0, 0)
+        if self.SCREEN != None:
+            pygame.quit()
+            self.SCREEN = None
+        self.game_over = False
+        self.snake = Snake(0,0)
+        self.snake.add_node(0,0)
         self.get_starting_position()
         self.food = False
+        self.score = 0
+        self.reward = None
 
     def step(self, action):
-        self.reward = self.score
-        self.check_snake_position()
-
+        self.reward = 0
         if not self.food:
             self.spawn_food()
             self.food = True
-
+        prev_x, prev_y = self.snake.head.x, self.snake.head.y
+        self.snake.previous_direction = self.snake.direction
         self.snake.direction = action
-        self.snake.move(self.level)
+
+        self.check_snake_position()
+        collision = self.snake.move(self.level)
+        if collision:
+            self.game_over =True
+        if self.game_over:
+            self.reward = -100
+            return self.observation, self.reward, self.game_over
+        
 
         if self.snake.head.x == self.food_x and self.snake.head.y == self.food_y:
             self.score += 1
-            self.food = False
+            self.reward += 100
             self.snake.add_node(self.food_x, self.food_y)
-        
-        if self.snake.direction == "STOP":
-            self.done = True
+            self.spawn_food()
 
-        self.reward -= self.score
-        self.observation = [self.snake.nodes_positions, self.level, (self.food_x, self.food_y)]
-        return self.observation, self.reward, self.done
+        if (abs(prev_x - self.food_x) > abs(self.snake.head.x - self.food_x)) or (abs(prev_y - self.food_y) > abs(self.snake.head.y - self.food_y)):
+           self.reward += 1
+        else:
+            self.reward -= 1
+        
+        self.observation = [self.snake.nodes_positions, self.reward, (self.food_x, self.food_y), self.snake.direction, (self.WIDTH, self.HEIGHT)]
+        return self.observation, self.reward, self.game_over
 
     def get_starting_position(self):
         found_snake_location = False
@@ -59,7 +67,27 @@ class SnakeGame:
             y = random.randrange(0, self.HEIGHT - 1, 1)
             if (x,y) not in self.level:
                 self.snake.head.x, self.snake.head.y = x, y
-                found_snake_location = True      
+                found_snake_location = True 
+  
+    def check_snake_position(self):
+        if self.snake.direction == 'STOP':
+            self.game_over = True
+        if self.snake.head.x == (self.WIDTH - 1) and self.snake.direction == 'RIGHT':
+            #print("HIT RIGHT")
+            self.snake.direction = 'STOP'
+            self.game_over = True
+        if self.snake.head.x == 0 and self.snake.direction == 'LEFT':
+            #print("HIT LEFT")
+            self.snake.direction = 'STOP'
+            self.game_over = True
+        if self.snake.head.y == (self.HEIGHT - 1) and self.snake.direction == 'DOWN':
+            #print("HIT BOTTOM")
+            self.snake.direction = 'STOP'
+            self.game_over = True
+        if self.snake.head.y == 0 and self.snake.direction == 'UP':
+            #print("HIT UP")
+            self.snake.direction = 'STOP'
+            self.game_over = True
     
     def spawn_food(self):
         found_food_location = False
@@ -70,45 +98,30 @@ class SnakeGame:
                 self.food_x, self.food_y = x, y
                 found_food_location = True
 
-    def check_snake_position(self):
-        if self.snake.head.x >= self.WIDTH:
-            self.snake.head.x = 0
-        if self.snake.head.x < 0:
-            self.snake.head.x = self.WIDTH
-        if self.snake.head.y >=self.HEIGHT:
-            self.snake.head.y = 0
-        if self.snake.head.y < 0:
-            self.snake.head.y = self.HEIGHT
-
     def render(self):
-        self.SCREEN.fill(BACKGROUD_COLOUR)
+            if self.SCREEN == None:
+                pygame.init()
+                pygame.display.set_caption("Snake")
+                self.SCREEN = pygame.display.set_mode((self.WIDTH * self.BLOCK_SIZE, self.HEIGHT * self.BLOCK_SIZE))
+                self.clock = pygame.time.Clock()
+                self.font = pygame.font.Font(None, FONT_SIZE)
+            self.SCREEN.fill(BACKGROUD_COLOUR)
 
-        # draw the grid
-        for x in range(0, self.WIDTH * self.BLOCK_SIZE, self.BLOCK_SIZE):
-            for y in range(0, self.HEIGHT * self.BLOCK_SIZE, self.BLOCK_SIZE):
-                pygame.draw.rect(self.SCREEN, GRID_COLOUR, pygame.Rect(x, y, self.BLOCK_SIZE, self.BLOCK_SIZE), 1)
-        # draw the snake
-        self.snake.draw(self.SCREEN, self.BLOCK_SIZE)
-        # draw the food
-        pygame.draw.rect(self.SCREEN, FOOD_COLOUR, pygame.Rect(self.food_x * self.BLOCK_SIZE, self.food_y * self.BLOCK_SIZE, self.BLOCK_SIZE, self.BLOCK_SIZE))
-        # draw the obstacles
-        for obstacle in self.level:
-            x, y = obstacle[0] * self.BLOCK_SIZE, obstacle[1] * self.BLOCK_SIZE
-            pygame.draw.rect(self.SCREEN, OBSTACLE_COLOUR, pygame.Rect(x, y, self.BLOCK_SIZE, self.BLOCK_SIZE))
-        # draw the score
-        img = self.font.render(f"Score: {self.score}", True, FONT_COLOUR)
-        self.SCREEN.blit(img, (self.SCORE_X, self.SCORE_Y))
+            # draw the grid
+            for x in range(0, self.WIDTH * self.BLOCK_SIZE, self.BLOCK_SIZE):
+                for y in range(0, self.HEIGHT * self.BLOCK_SIZE, self.BLOCK_SIZE):
+                    pygame.draw.rect(self.SCREEN, GRID_COLOUR, pygame.Rect(x, y, self.BLOCK_SIZE, self.BLOCK_SIZE), 1)
+            # draw the snake
+            self.snake.draw(self.SCREEN, self.BLOCK_SIZE)
+            # draw the food
+            pygame.draw.rect(self.SCREEN, FOOD_COLOUR, pygame.Rect(self.food_x * self.BLOCK_SIZE, self.food_y * self.BLOCK_SIZE, self.BLOCK_SIZE, self.BLOCK_SIZE))
+            # draw the obstacles
+            for obstacle in self.level:
+                x, y = obstacle[0] * self.BLOCK_SIZE, obstacle[1] * self.BLOCK_SIZE
+                pygame.draw.rect(self.SCREEN, OBSTACLE_COLOUR, pygame.Rect(x, y, self.BLOCK_SIZE, self.BLOCK_SIZE))
+            # draw the score
+            img = self.font.render(f"Score: {self.score}", True, FONT_COLOUR)
+            self.SCREEN.blit(img, (self.SCORE_X, self.SCORE_Y))
 
-        pygame.display.update()
+            pygame.display.update()
 
-
-def test():
-    env = SnakeGame()
-    for _ in range(100):
-        env.clock.tick(env.FPS)
-        action = random.choice(env.actions)
-        observation, reward, done = env.step(action)
-        env.render()
-
-if __name__ == "__main__":
-    test()

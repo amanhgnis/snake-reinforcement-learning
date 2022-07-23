@@ -44,6 +44,8 @@ class Snake:
         """
         # Get the new coordinates of the head
         new_x, new_y = self.head.x, self.head.y
+        if self.direction == None:
+            return False
         if self.direction == "RIGHT":
             new_x += 1
         if self.direction == "LEFT":
@@ -52,12 +54,17 @@ class Snake:
             new_y -= 1
         if self.direction == "DOWN":
             new_y += 1
+        if self.direction == "STOP":
+            return True
+        ''' 
         if self.direction == "STOP" or self.direction == None:
-           return 
-
+            return False
+        '''
         # continue in the previous direction if trying to "go back" (if there are more than 1 nodes)
         if len(self.nodes_positions) > 1 and new_x == self.head.next_node.x and new_y == self.head.next_node.y:
             self.direction = self.previous_direction
+            self.move()
+            #print("GOING BACK")
             return
         
         # check collision with obstacles
@@ -65,14 +72,14 @@ class Snake:
             x, y = obstacle[0], obstacle[1]
             if new_x == x and new_y == y:
                 self.direction = "STOP"
-                return
+                return True
 
         # check collision with other nodes
         for node_position in self.nodes_positions:
             x, y = node_position[0], node_position[1]
             if new_x == x and new_y == y:
                 self.direction = "STOP"
-                return
+                return True
 
         self.nodes_positions = []
         # now move each node
@@ -87,12 +94,17 @@ class Snake:
         current_x, current_y = current_node.x, current_node.y
         current_node.x, current_node.y =  new_x, new_y
         self.nodes_positions.append((current_node.x, current_node.y))
+        return False
 
     def draw(self, WIN, size):
         current_node = self.head
-        while current_node.next_node != None:   
-            rect = pygame.Rect(current_node.x * size, current_node.y * size, size, size)
-            pygame.draw.rect(WIN, SNAKE_COLOUR, rect)
+        while current_node.next_node != None:
+            if current_node == self.head:
+                rect = pygame.Rect(current_node.x * size, current_node.y * size, size, size)
+                pygame.draw.rect(WIN, HEAD_COLOUR, rect) 
+            else:
+                rect = pygame.Rect(current_node.x * size, current_node.y * size, size, size)
+                pygame.draw.rect(WIN, SNAKE_COLOUR, rect)
             current_node = current_node.next_node
         # draw tail
         rect = pygame.Rect(current_node.x * size, current_node.y * size, size, size)
