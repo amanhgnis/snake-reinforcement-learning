@@ -63,7 +63,8 @@ class QAgent:
         state = (u, d, l, r, ub, db, lb, rb, du, dd, dl, dr)
         return state
 
-
+save_epochs = [1, 100, 200, 300]
+import pickle
 
 def test():
     episodes = 300
@@ -76,6 +77,9 @@ def test():
     agent = QAgent(n_features=12, n_actions=4)
     env = SnakeGame()
     for ep in range(1, episodes+1):
+        if ep in save_epochs:
+            with open(f"./results/Q{ep}.pkl", "wb") as f:
+                pickle.dump(agent.Q, f)
         steps = 0
         print(f"EPISODE {ep}", end="\t")
         if epsilon > epsilon_min:
