@@ -43,6 +43,7 @@ class SnakeGame():
             self.game_over =True
         if self.game_over:
             self.reward = -100
+            #self.observation = [self.snake.nodes_positions, self.reward, (self.food_x, self.food_y), self.snake.direction, (self.WIDTH, self.HEIGHT)]
             return self.observation, self.reward, self.game_over
         
 

@@ -88,7 +88,7 @@ def test():
         # Initial state
         s = agent.get_state(observation)
         while not env.game_over and steps < max_steps:
-            a = agent.choose_action(s)
+            a = agent.choose_action(s, epsilon)
             action = env.actions[a]
             if action == env.opposite[env.snake.direction]:
                 action = env.snake.direction
