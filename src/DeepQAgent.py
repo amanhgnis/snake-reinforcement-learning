@@ -52,9 +52,9 @@ class DQN(nn.Module):
         :param activation: activation function for the hidden layers
         """
         super().__init__()
-        self.fc1 = nn.Linear(in_features=input_dim, out_features=256)
-        self.fc2 = nn.Linear(in_features=256, out_features=256)
-        self.out = nn.Linear(in_features=256, out_features=output_dim)
+        self.fc1 = nn.Linear(in_features=input_dim, out_features=512)
+        self.fc2 = nn.Linear(in_features=512, out_features=512)
+        self.out = nn.Linear(in_features=512, out_features=output_dim)
         self.act = activation
 
     def forward(self, x):
@@ -70,14 +70,14 @@ class DeepQAgent:
         self.policy_net = DQN(n_features, n_actions, nn.ReLU())
         self.target_net = DQN(n_features, n_actions, nn.ReLU())
         self.loss_fn = nn.MSELoss()
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-4)
         self.training_iterations = 0
         self.replace_every = 10
         self.batch_size = batch_size
 
-
     def get_state(self, observation):
         head = observation[0][0]
+        nodes = observation[0]
         food = observation[2]
         direction = observation[3]
         size = observation[4]
@@ -86,45 +86,26 @@ class DeepQAgent:
 
         dx = x_food - x_head
         dy = y_food - y_head
-        u, d, l, r = 0, 0, 0, 0
-
-
-        if dy > 0:
-            d = 1
-        else:
-            u = 1
-        if dx > 0:
-            r = 1
-        else:
-            l = 1
-        ub, db, lb, rb = 0, 0, 0, 0
-        # check if there are any walls
-        if x_head == size[0] - 1:
-            rb = 1
-        if y_head == size[1] - 1:
-            db = 1
-        if x_head == 0:
-            lb = 1
-        if y_head == 0:
-            ub = 1
         
-        above, below, left, right = y_head - 1, y_head + 1, x_head - 1, x_head + 1
-        for nodes in observation[0][1:]:
-            x, y = nodes[0], [1]
-            if y == above:
-                ub = 1
-            if y == below:
-                db = 1
-            if x == left:
-                lb = 1
-            if x == right:
-                rb = 1
+        state = np.zeros((9,9))
+        for i in range(-5,4):
+            for j in range(-5,4):
+                x = x_head + i 
+                y = y_head + j 
+                for node in nodes:
+                    if x == node[0] and y == node[1]:
+                        state[j+4][i+4] = 1
+                if (x == 0 or x == size[0] -1) or (y == 0 or y == size[1] - 1):
+                    state[j+4][i+4] = 1
+
+        state = state.flatten()
+        state = list(state)
         du, dd, dl, dr =  int(direction == 'UP'), int(direction == 'DOWN'), int(direction == 'LEFT'), int(direction == 'RIGHT')
-        state = (u, d, l, r, ub, db, lb, rb, du, dd, dl, dr)
+        state = state + [dx, dy, du, dd, dl, dr]
         return state
-        
+
     def choose_action(self, state, epsilon):
-        state = torch.tensor(state, dtype=torch.float32)
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
         if np.random.uniform(0,1) < epsilon:
             action = np.random.choice([0,1,2,3])
         else:
@@ -165,10 +146,10 @@ class DeepQAgent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        return loss.detach().cpu()
         
     def update_target_net(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
-
 
 
 def test():
@@ -176,14 +157,13 @@ def test():
     max_steps = 2000
     epsilon = 1.0
     epsilon_min = 0.01
-    epsilon_decay = 0.98
-    discount = 0.95
-    agent = DeepQAgent(n_features=12, n_actions=4, batch_size=512)
-    env = SnakeGame()
+    epsilon_decay = 0.99
+    discount = 0.99
+    agent = DeepQAgent(n_features=87, n_actions=4, batch_size=512)
+    env = SnakeGame(board_size=(32,32),block_size=15)
     for ep in range(1, episodes+1):
         steps = 0
         total_reward = 0
-        print(f"EPISODE {ep}", end="\t")
         if epsilon > epsilon_min:
             epsilon *= epsilon_decay
         env.reset()
@@ -193,8 +173,8 @@ def test():
         observation, r, done = env.step(action)
         # Initial state
         s = agent.get_state(observation)
+        env.render()
         while not env.game_over and steps < max_steps:
-            #a = random.choice([0,1,2,3]) 
             a = agent.choose_action(s, epsilon)
             action = env.actions[a]
             if action == env.opposite[env.snake.direction]:
@@ -205,16 +185,20 @@ def test():
             steps += 1
             # Now I have s, a, r
             s_ = agent.get_state(observation)
+
             # Now I have s, a, r, s'
-            agent.learn(s, a, r, s_, done)
+            loss = agent.learn(s, a, r, s_, done)
             if ep % 1 == 0:
                 env.render()
                 env.clock.tick(24)
             s = s_
             total_reward += r
-        print(f"SCORE {env.score}   EPSILON {epsilon:.4f}   TOTAL REWARD {total_reward}")
+        if loss == None:
+            loss = 0
+        print(f"EPISODE {ep}    SCORE {env.score}   EPSILON {epsilon:.4f}   TOTAL REWARD {total_reward}    LOSS {loss:.4f}")
 
         if ep % agent.replace_every == 0:
+            print(f"UPDATING TARGET NETWORK")
             agent.update_target_net()
 
 

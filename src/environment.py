@@ -3,6 +3,7 @@ import random
 import pygame
 from consts import *
 import numpy as np
+import pickle
 
 class SnakeGame():
     def __init__(self, board_size=(32,32), level=[], block_size=15):
@@ -126,3 +127,45 @@ class SnakeGame():
 
             pygame.display.update()
 
+def train(environment, agent, episodes, max_steps_per_episode, epsilon, minimum_epsilon, epsilon_decay, discount, learning_rate, save_episodes, render_every):
+    reward_log = []
+    score_log = []
+    for episode in range(1, episodes+1):
+        episode_reward = 0
+        if episode in save_episodes:
+            with open(f"./results/Q{episode}.pkl", "wb") as f:
+                pickle.dump(agent.Q, f)
+        steps = 0
+        print(f"EPISODE {episode}", end="\t")
+        if epsilon > minimum_epsilon:
+            epsilon *= epsilon_decay
+        environment.reset()
+
+        a = random.choice([0,1,2,3]) 
+        action = environment.actions[a]
+        observation, r, done = environment.step(action)
+        # Initial state
+        s = agent.get_state(observation)
+        while not environment.game_over and steps < max_steps_per_episode:
+            a = agent.choose_action(s, epsilon)
+            action = environment.actions[a]
+            if action == environment.opposite[environment.snake.direction]:
+                action = environment.snake.direction
+            
+            # Now I have s, a
+            observation, r, done = environment.step(action)
+            steps += 1
+            # Now I have s, a, r
+            s_ = agent.get_state(observation)
+            # Now I have s, a, r, s'
+            agent.Q[s][a] = agent.Q[s][a] + learning_rate * (r + discount * np.max(agent.Q[s_]) - agent.Q[s][a])
+            if episode % render_every == 0:
+                environment.render()
+                environment.clock.tick(24)
+            s = s_
+            episode_reward += r
+        print(f"SCORE {environment.score}   EPSILON {epsilon:.4f}")
+        reward_log.append(episode_reward)
+        score_log.append(environment.score)
+
+    return reward_log, score_log
