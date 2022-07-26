@@ -64,15 +64,16 @@ class DQN(nn.Module):
         return x
 
 class DeepQAgent:
-    def __init__(self, n_features=8, n_actions=4, discount=0.95, batch_size=32):
-        self.replay_memory = ReplayMemory(10000)
+    def __init__(self, n_features=8, n_actions=4, discount=0.95, batch_size=512, replay_memory_size=10000, lr=1e-4, replace_target_every=10):
+        self.name = "DeepQAgent"
+        self.replay_memory = ReplayMemory(replay_memory_size)
         self.discount = discount
         self.policy_net = DQN(n_features, n_actions, nn.ReLU())
         self.target_net = DQN(n_features, n_actions, nn.ReLU())
         self.loss_fn = nn.MSELoss()
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.training_iterations = 0
-        self.replace_every = 10
+        self.replace_every = replace_target_every
         self.batch_size = batch_size
 
     def get_state(self, observation):
@@ -150,57 +151,3 @@ class DeepQAgent:
         
     def update_target_net(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
-
-
-def test():
-    episodes = 10000
-    max_steps = 2000
-    epsilon = 1.0
-    epsilon_min = 0.01
-    epsilon_decay = 0.99
-    discount = 0.99
-    agent = DeepQAgent(n_features=87, n_actions=4, batch_size=512)
-    env = SnakeGame(board_size=(32,32),block_size=15)
-    for ep in range(1, episodes+1):
-        steps = 0
-        total_reward = 0
-        if epsilon > epsilon_min:
-            epsilon *= epsilon_decay
-        env.reset()
-
-        a = random.choice([0,1,2,3]) 
-        action = env.actions[a]
-        observation, r, done = env.step(action)
-        # Initial state
-        s = agent.get_state(observation)
-        env.render()
-        while not env.game_over and steps < max_steps:
-            a = agent.choose_action(s, epsilon)
-            action = env.actions[a]
-            if action == env.opposite[env.snake.direction]:
-                action = env.snake.direction
-            
-            # Now I have s, a
-            observation, r, done = env.step(action)
-            steps += 1
-            # Now I have s, a, r
-            s_ = agent.get_state(observation)
-
-            # Now I have s, a, r, s'
-            loss = agent.learn(s, a, r, s_, done)
-            if ep % 1 == 0:
-                env.render()
-                env.clock.tick(24)
-            s = s_
-            total_reward += r
-        if loss == None:
-            loss = 0
-        print(f"EPISODE {ep}    SCORE {env.score}   EPSILON {epsilon:.4f}   TOTAL REWARD {total_reward}    LOSS {loss:.4f}")
-
-        if ep % agent.replace_every == 0:
-            print(f"UPDATING TARGET NETWORK")
-            agent.update_target_net()
-
-
-if __name__ == "__main__":
-    test()

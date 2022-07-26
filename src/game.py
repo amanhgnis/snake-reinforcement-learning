@@ -4,7 +4,7 @@ from snake import Snake
 from consts import *
 
 class Game:
-    def __init__(self, size=(21, 21), block_size=25, level=[], FPS = 10):
+    def __init__(self, size=(32, 32), block_size=15, level=[], FPS = 10):
         """
         :param size: size of the grid
         :param block_size: size of each block of the grid
@@ -24,7 +24,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.FPS = FPS
         self.font = pygame.font.Font(None, FONT_SIZE)
-        self.SCORE_X = (self.WIDTH  -  4)* self.block_size
+        self.SCORE_X = (self.WIDTH  -  8)* self.block_size
         self.SCORE_Y = 5
         self.food = False
         self.running = True
@@ -108,13 +108,7 @@ class Game:
 
 
 def main():
-    level = [
-        (0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5,0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
-        (20, 20), (19, 20), (18, 20), (17, 20), (16, 20), (15, 20), (20,19), (20, 18), (20, 17), (20, 16), (20, 15), 
-        (0, 20), (0, 19), (0, 18), (0, 17), (0, 16), (0, 15), (1,20), (2, 20), (3, 20), (4, 20), (5, 20),
-        (20, 0), (20, 1), (20, 2), (20, 3), (20, 4), (20,5), (19, 0), (18, 0), (17, 0), (16, 0), (15, 0),
-    ]
-    game = Game(size=(21, 21), level=level)
+    game = Game()
     game.play()
 
 if __name__ == "__main__":
