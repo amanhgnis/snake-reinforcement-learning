@@ -4,8 +4,10 @@ import numpy as np
 from QAgent import QAgent
 from DeepQAgent import DeepQAgent
 from environment import SnakeGame
+import pickle
+import torch
 
-def train(agent_name, episodes, epsilon, epsilon_min, epsilon_decay, discount, lr, max_steps, render, render_every, save):
+def train(agent_name, episodes, epsilon, epsilon_min, epsilon_decay, discount, lr, max_steps, render, render_every, save, path_dir):
     if agent_name == "QAgent":
         agent = QAgent(12, 4)
     if agent_name == "DeepQAgent":
@@ -41,6 +43,11 @@ def train(agent_name, episodes, epsilon, epsilon_min, epsilon_decay, discount, l
             if episode % agent.replace_every == 0:
                 print(f"UPDATING TARGET NETWORK")
                 agent.update_target_net()
+    if agent_name == "QAgent":
+        with open(path_dir +"/Q.pkl", "wb") as f:
+            pickle.dump(agent.Q, f)
+    if agent_name == "DeepQAgent":
+        torch.save(agent.policy_net.state_dict(), path_dir+"/policy_net_state_dict.torch")
 
 
 def main():
@@ -56,6 +63,7 @@ def main():
     parser.add_argument("--render", type=int, help="Render the environment during training", default=1)
     parser.add_argument("--render_every", type=int, help="Interval of episodes between rendering", default=10)
     parser.add_argument("--save", type=int, help="Save model", default=0)
+    parser.add_argument("--path", type=str, help="Path where the model is saved after training", default="./")
     args = parser.parse_args()
 
     train(
@@ -69,7 +77,8 @@ def main():
         max_steps=args.max_steps,
         render=args.render,
         render_every=args.render_every,
-        save=args.save
+        save=args.save,
+        path_dir=args.path
     )
 
 
